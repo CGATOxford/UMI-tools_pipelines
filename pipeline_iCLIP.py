@@ -234,7 +234,7 @@ def generateReaperMetaData(infile, outfile):
 @follows(loadUMIStats, generateReaperMetaData)
 @subdivide(extractUMI, regex(".+/(.+).fastq.umi_trimmed.gz"),
            add_inputs(r"\1_reaper_metadata.tsv", "sample_table.tsv"),
-           r"demux_fq/*_\1.fastq*gz")
+           r"demux_fq/*.fastq.gz")
 def demux_fastq(infiles, outfiles):
     '''Demultiplex each fastq file into a seperate file for each
     barcode/UMI combination'''
@@ -288,71 +288,41 @@ def PrepareReads():
 ###################################################################
 # Mapping
 ###################################################################
-def mapping_files():
-
-    infiles = glob.glob("%s/*.fastq*gz" % PARAMS["input"])
-    infiles = [infile for infile in infiles if ".fastq.umi_trimmed.gz"
-               not in infile]
-    outfiles = set(
-        ["mapping.dir/%(mapper)s.dir/%(track)s.%(mapper)s.bam"
-         % {"mapper": PARAMS["mappers"],
-            "track": re.match("%s/(.+).fastq.*gz"
-                              % PARAMS["input"], infile).groups()[0]}
-         for infile in infiles
-         if "umi_trimmed" not in infile])
-
-    yield (infiles, outfiles)
-
-
-###################################################################
 @follows(mkdir("mapping.dir"), demux_fastq)
-@files(mapping_files)
-def run_mapping(infiles, outfiles):
+@transform(demux_fastq,
+           regex(".+/(.+).fastq.gz"),
+           r"mapping.dir/\1.bam")
+def run_mapping(infile, outfiles):
     ''' run the mapping target of the mapping pipeline '''
 
-    to_cluster = False
-    statement = ''' ln -f pipeline.ini mapping.dir/pipeline.ini;
-                    checkpoint;
-                    cd mapping.dir;
-                    nice python %(pipelinedir)s/pipeline_mapping.py
-                    make mapping
-                    -v5 -p%(pipeline_mapping_jobs)s  '''
+    if PARAMS["mapper"] == "bowtie":
+        job_threads = PARAMS["bowtie_threads"]
+        job_memory = PARAMS["bowtie_memory"]
+
+        m = PipelineMapping.Bowtie(
+            executable=PARAMS["bowtie_executable"],
+            tool_options=PARAMS["bowtie_options"],
+            strip_sequence=PARAMS["strip_sequence"])
+        
+        reffile = os.path.join(PARAMS["bowtie_index_dir"],
+                               PARAMS["genome"] + ".fa")
+        statement = m.build((infile,), outfile)
+
+    elif["mapper"] == "star":
+        job_threads = PARAMS["star_threads"]
+        job_memory = PARAMS["star_memory"]
+
+        star_mapping_genome = PARAMS["star_genome"] or PARAMS["genome"]
+
+        m = PipelineMapping.STAR(
+            executable=P.substituteParameters(**locals())["star_executable"],
+            strip_sequence=PARAMS["strip_sequence"])
+
+        statement = m.build((infile,), outfile)
+    else:
+        raise ValueError("Mapper '%s' not implemented" % PARAMS["mapper"])
 
     P.run()
-
-
-###################################################################
-@follows(run_mapping)
-@originate("mapping.dir/geneset.dir/reference.gtf.gz")
-def buildReferenceGeneSet(outfile):
-    
-    to_cluster = False
-
-    statement = '''cd mapping.dir;
-                   nice python %(pipelinedir)s/pipeline_mapping.py
-                        make buildReferenceGeneSet
-                        -v5 -p%(pipeline_mapping_jobs)s '''
-
-    P.run()
-
-
-###################################################################
-@transform(run_mapping, regex("(.+)"),
-           "mapping.dir/view_mapping.load")
-def createViewMapping(infile, outfile):
-    ''' Create tables neccessary for mapping report '''
-
-    to_cluster = False
-    statement = '''cd mapping.dir;
-                   nice python %(pipelinedir)s/pipeline_mapping.py
-                   make createViewMapping -v5 -p1 '''
-    P.run()
-
-
-###################################################################
-@follows(run_mapping, createViewMapping)
-def mapping():
-    pass
 
 
 ###################################################################
