@@ -206,8 +206,8 @@ def loadUMIStats(infile, outfile):
 
 
 ###################################################################
-@transform(filterPhiX,
-           regex("(.+).fastq.clean.gz"),
+@transform("*.fastq.gz",
+           regex("(.+).fastq.gz"),
            add_inputs("sample_table.tsv"),
            r"\1_reaper_metadata.tsv")
 def generateReaperMetaData(infile, outfile):
@@ -218,7 +218,7 @@ def generateReaperMetaData(infile, outfile):
     adaptor_3prime = PARAMS["reads_3prime_adapt"]
 
     outlines = []
-    lane = P.snip(infile[0], ".fastq.clean.gz")
+    lane = P.snip(infile[0], ".fastq.gz")
     for line in IOTools.openFile(infile[1]):
         fields = line.split("\t")
         barcode = fields[1]
@@ -322,7 +322,7 @@ def run_mapping(infiles, outfiles):
 
 
 ###################################################################
-@follows(mapping_qc)
+@follows(run_mapping)
 @originate("mapping.dir/geneset.dir/reference.gtf.gz")
 def buildReferenceGeneSet(outfile):
     
@@ -337,20 +337,20 @@ def buildReferenceGeneSet(outfile):
 
 
 ###################################################################
-@transform(mapping_qc, regex("(.+)"),
+@transform(run_mapping, regex("(.+)"),
            "mapping.dir/view_mapping.load")
 def createViewMapping(infile, outfile):
     ''' Create tables neccessary for mapping report '''
 
     to_cluster = False
     statement = '''cd mapping.dir;
-                   nice python %(pipelinesdir)s/pipeline_mapping.py
+                   nice python %(pipelinedir)s/pipeline_mapping.py
                    make createViewMapping -v5 -p1 '''
     P.run()
 
 
 ###################################################################
-@follows(mapping_qc,loadContextIntervalStats )
+@follows(run_mapping, createViewMapping)
 def mapping():
     pass
 
@@ -359,8 +359,7 @@ def mapping():
 # Deduping, Counting, etc
 ###################################################################
 @follows(mkdir("deduped.dir"), run_mapping)
-@transform(indexMergedBAMs, regex("(.+)/merged_(.+)\.([^\.]+)\.bam.bai"),
-           inputs(r"\1/merged_\2.\3.bam"),
+@transform(run_mapping, regex("(.+)/(.+)\.([^\.]+)\.bam"),
            r"deduped.dir/\2.bam")
 def dedup_alignments(infile, outfile):
     ''' Deduplicate reads, taking UMIs into account'''
