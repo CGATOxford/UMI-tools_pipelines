@@ -1,0 +1,3 @@
+[submodule "iCLIPlib"]
+	path = iCLIPlib
+	url = git@github.com:sudlab/iCLIPlib.git
