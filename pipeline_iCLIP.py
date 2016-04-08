@@ -185,6 +185,7 @@ PARAMS["pipeline_src"] = os.path.dirname(__file__)
 ###################################################################
 # Read preparation
 ###################################################################
+@jobs_limit(1, "db")
 @transform("sample_table.tsv", suffix(".tsv"), ".load")
 def loadSampleInfo(infile, outfile):
 
@@ -210,6 +211,7 @@ def extractUMI(infile, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @transform(extractUMI, suffix(".fastq.umi_trimmed.gz"),
            "umi_stats.load")
 def loadUMIStats(infile, outfile):
@@ -413,6 +415,7 @@ def loadEditDistances(infile, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @collate(dedup_bams,
          formatter("dedup_cluster.dir/(?P<Track>.+).bam"),
          inputs(r"dedup_cluster.dir/{Track[0]}_topologies.tsv"),
@@ -429,6 +432,7 @@ def load_topologies(infiles, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @collate(dedup_bams,
          formatter("dedup_cluster.dir/(?P<Track>.+).bam"),
          inputs(r"dedup_cluster.dir/{Track[0]}_nodes.tsv"),
@@ -502,6 +506,7 @@ def count_bams(infiles, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @transform(count_bams, suffix(".tsv"), ".load")
 def load_read_counts(infile, outfile):
 
@@ -631,6 +636,7 @@ def count_exons(infiles, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @merge(count_exons, "exon_counts.load")
 def load_exon_counts(infiles, outfile):
 
@@ -663,6 +669,7 @@ def count_sig_bases_over_exons(infiles, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @merge(count_sig_bases_over_exons, "sig_exon_counts.load")
 def load_sig_exon_counts(infiles, outfile):
 
@@ -699,6 +706,7 @@ def calculate_base_level_reproducibility(infiles, outfile):
 
 
 ###################################################################
+@jobs_limit(1, "db")
 @merge(calculate_base_level_reproducibility, "base_level_reproducibility.load")
 def load_base_level_reproducibility(infiles, outfile):
 
