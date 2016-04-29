@@ -174,7 +174,7 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
 
         dedup_method = infile.split("/")[-2].replace(
             "dedup_", "").replace(".dir", "")
-        
+
         tmp_df = pd.read_table(infile)
         tmp_df.columns = [x.replace("-", "_") for x in tmp_df.columns]
         tmp_post_df = tmp_df[[dedup_method, "%s_null" % dedup_method,
@@ -183,6 +183,10 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
                                for x in tmp_post_df.columns]
         pre_null_df[dedup_method] = tmp_df["unique_null"]
         dedup_method = dedup_method.title()
+
+        if dedup_method == "Directional_Adjacency":
+            dedup_method = "Directional"
+
         tmp_post_df['method'] = dedup_method
 
         final_df = final_df.append(tmp_post_df)
@@ -213,7 +217,7 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
 
     df$method = factor(df$method,
                        levels=c("Unique", "Percentile", "Cluster",
-                                "Adjacency", "Directional_Adjacency",
+                                "Adjacency", "Directional",
                                 "Null"))
 
     a = aes(y=post, x=method)
@@ -472,7 +476,7 @@ def makeHeatmapsAndPCA(infiles,
         hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
 
         col_cols = sapply(colnames(df),
-          FUN=function(x) ifelse(grepl(".*day0", x), "red", "green"))
+          FUN=function(x) ifelse(grepl(".*day0", x), "chartreuse4", "chocolate2"))
 
         d = as.dendrogram(hclust(as.dist(1-cor(df,
                                        method = "spearman")),
@@ -489,7 +493,7 @@ def makeHeatmapsAndPCA(infiles,
         write.table(cluster_table, table_outfile,
                     quote=FALSE, sep="\t", row.names=FALSE)
 
-        png(plot_outfile, width=10, height=10, units = 'in', res = 600)
+        png(plot_outfile, width=25, height=25, unit="cm", res=400)
 
         heatmap.2(as.matrix(df),
                   col = hmcol, scale="none", trace="none",
@@ -561,7 +565,8 @@ def makeHeatmapsAndPCA(infiles,
         s_s = scale_shape_discrete(name="")
         t = theme(axis.text.x = s_text, axis.text.y = s_text,
                   title = m_text, legend.text = m_text,
-                  legend.title = m_text, legend.key.size = unit(7, "mm"))
+                  legend.title = m_text, legend.key.size = unit(7, "mm"),
+                  aspect.ratio=1)
 
         p_pca = ggplot(PCs_df, aes(x=PC1, y=PC2)) +
         xlab(paste0('PC1 (Variance explained = ' ,
@@ -603,7 +608,7 @@ def makeHeatmapsAndPCA(infiles,
                      round(100 * variance_explained[2], 1), '%)')) +
         theme_bw() + t
 
-        ggsave(paste0(plot_base, "_pc3_pc4_expression.png"), width=5, height=5)
+        ggsave(paste0(plot_base, "_pc3_pc4_expression.png"), width=7, height=5)
 
         }''')
 
@@ -708,8 +713,8 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
                                       barcodes1_infile, barcodes2_infile,
                                       cell_barcode_count):
     '''Paired end sequencing:
-    read 1 - cell barcode1 (8-12bp) then adapter sequence (10bp),
-             cell barcode2 (8bp) then UMI (6bp)
+    read 1 - 51bp: cell barcode1 (8-12bp) then adapter sequence (22bp),
+             cell barcode2 (8bp) then UMI (6bp), then Ts
     read 2 - genomic sequence
 
     Need to extract UMI, append to read 2 read name and write out
@@ -732,11 +737,14 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
     generate the frequency table and then again to identify all cell
     barcodes within a hamming distance of 2 from the n most abundnant
     barcodes. However, the identification of cell barcode near
-    mismatches is extremely time consuming. Hence, only perfect
-    matches are retained. Since we have already identified all the
-    candidate perfect matches on the first parse, we can save these
-    out to a temporary single end fastq and parse this to identify the
-    perfect matches to the n most abundant cell barcodes
+    mismatches is extremely time consuming and some barcodes cannot be
+    unambiguously resolved at a Hamming distance of 2. Hence, only
+    perfect cell barcode matches are retained.
+
+    Since we have already identified all the candidate perfect matches
+    on the first parse, we can save these out to a temporary single
+    end fastq and parse this to identify the perfect matches to the n
+    most abundant cell barcodes
     '''
 
     def reverseComp(seq):
@@ -816,25 +824,37 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
 
             UMI_record.format = "illumina-1.8"
 
+            # match must start from at least 9 bp into fastq sequence
+            # allow two mismatches
             pos = regex.search("(GAGTGATTGCTTGTGACGCCTT){s<=2}",
-                               UMI_record.seq)
+                               UMI_record.seq[8:])
             
             #pos = re.search("GAGTGATTGCTTGTGACGCCTT", UMI_record.seq)
 
-            # if no match or matched string is not the right length, skip
+            # Skip if:
+            # - no match
+            # - matched string is not the right length
+            # - match starts too far from 5' end
             if not pos:
                 counts["no_adapter_sequence"] += 1
                 continue
+
             if len(pos.captures()[0]) != 22:
                 counts["adapter_sequence_wrong_length"] += 1
                 continue
+                
+            start = pos.start() + 8
+            if start > 12:
+                counts["no_adapter_sequence_match_in_correct_location"] += 1
+                continue
 
-            start = pos.start()
             barcode1 = UMI_record.seq[0:start]
             barcode2 = UMI_record.seq[start+22:start+30]
             UMI = UMI_record.seq[start+30:start+36]
 
-            # check barcode length (this is mainly for barcode 1)
+            # check barcode and UMI lengths. This is mainly to exlude
+            # read lengths which are too short to encode the UMI but
+            # also a back up check for barcode 1
             if len(barcode1) < 8:
                 counts["barcode1_too_short"] += 1
                 continue
@@ -847,14 +867,16 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
                 counts["barcode2_wrong_length"] += 1
                 continue
 
-            # check barcodes is found in list
+            if len(UMI) < 6:
+                counts["UMI_too_short"] += 1
+                continue
+
+            # check barcodes are found in lists
             if str(barcode1) not in barcode_set1:
-                print "b1 no match"
                 counts["barcode1_mismatch"] += 1
                 continue
 
             if str(barcode2) not in barcode_set2:
-                print "b2 no match"
                 counts["barcode2_mismatch"] += 1
                 continue
 
@@ -890,9 +912,7 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
         for x in barcode_set2:
             outf.write("%s\n" % "\t".join((x, "length: ", str(len(x)))))
 
-    # find the first n cell barcodes
-    # these represent the selected cells. The rest must be "corrected"
-    # to these (if possible!)
+    # find the first n cell barcodes these represent the selected cells
     cell_barcode_set = set()
     n = 1
     for barcode, count in outfs.most_common():
@@ -902,9 +922,6 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
         else:
             break
 
-
-    #fastq = IOTools.openFile(fastq_seq, "r")
-    #UMI_fastq = IOTools.openFile(fastq_UMI, "r")
     fastq = IOTools.openFile(outfile_tmp, "r")
 
     # use IOTools.FilePool class to open multiple file handles
@@ -921,8 +938,6 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
         record = 1
         while record is not None:
 
-            #record = FastqNext(fastq)
-            #UMI_record = FastqNext(UMI_fastq)
             record = FastqNext(fastq)
 
             # check for end of file
@@ -932,98 +947,18 @@ def extractUMIsAndFilterFastqGSE65525(fastq_UMI, fastq_seq,
 
             if counts["total"] % 100000 == 0:
                 outf.write("read through %i fastq records. %i records retained"
-                           "\n" % (n, counts["keep"]))
+                           "\n" % (counts["total"], counts["kept"]))
                 for reason, count in counts.most_common():
                     outf.write("%s\t%i\n" % (reason, count))
 
-            print record
             counts["total"] += 1
 
-            #if counts["total"] > 100000:
-            #    record is None
-            #    break
-
-            # check both records are for the same fastq read
-            #assert getReadName(UMI_record) == getReadName(record), (
-            #    "fastq read names do not match")
-
-            #UMI_record.format = "illumina-1.8"
             record.format = "illumina-1.8"
-
-            #pos = regex.search("(GAGTGATTGCTTGTGACGCCTT){s<=2}",
-            #                   UMI_record.seq)
-
-            # if no match or matched string is not the right length, skip
-            #if not pos:
-            #    counts["no_adapter_sequence"] += 1
-            #    continue
-            #if len(pos.captures()[0]) != 22:
-            #    counts["adapter_sequence_wrong_length"] += 1
-            #    continue
-
-            #start = pos.start()
-            #barcode1 = UMI_record.seq[0:start]
-            #barcode2 = UMI_record.seq[start+22:start+30]
-            #UMI = UMI_record.seq[start+30:start+36]
-            #print (start, UMI_record.seq, UMI_record.seq[start:start+22],
-            #       barcode1, barcode2, UMI)
-
-            # check barcode length (this is mainly for barcode 1)
-            #if len(barcode1) < 8:
-            #    counts["barcode1_too_short"] += 1
-            #    continue
-
-            #if len(barcode2) < 8:
-            #    counts["barcode2_too_short"] += 1
-            #    continue
-
-            #cell = barcode1 + barcode2
 
             cell = record.identifier.split("_")[-1]
 
             # check if cell barcode is in set
-            # if not, look for close matches in the cell barcode set
-            # and "correct" the cell barcode
             if cell not in cell_barcode_set:
-
-                #if barcode1 not in barcode_set1 and barcode2 not in barcode_set2:
-                #    cell_match = 0
-
-                #    for cell_barcode in cell_barcode_set:
-
-                #        if regex.search("(%s){s<=2}" % cell_barcode, cell):
-                #            cell_match += 1
-                #            correction_match = cell_barcode
-                #            break
-
-                    # Note: <1.5% of cell barcodes match more than 1 "correct"
-                    # barcode. hence, just find first match and use that.
-                    # if more than one match already found,
-                    # enough already to reject!
-                    #if cell_match <= 1:
-                    #    if regex.search("(%s){s<=2}" % cell_barcode, cell):
-                    #        cell_match += 1
-                    #        correction_match = cell_barcode
-                    #else:
-                    #    break
-                
-                    #if cell_match == 1:
-                    #    cell = correction_match
-                    #    counts["cell_barcode_mismatch_kept_corrected"] += 1
-
-                    #elif cell_match > 1:
-                    #    counts["cell_barcode_mismatch_too_many_correction_matches"] += 1
-                    #    continue
-
-                    #elif cell_match == 0 :
-                    #    counts["cell_barcode_mismatch_no_high_abundance_matches"]
-                    #    += 1
-                    #    continue
-
-                #else:
-                #    counts["cell_barcode_mismatch_matches_barcode_list"] += 1
-                #    continue
-
                 counts["cell_barcode_mismatch"] += 1
                 continue
 
@@ -1192,8 +1127,9 @@ def plotCV(infiles, plotfile, normalise_method):
     min_y_diff = min(log(df$cv-df$unique))
     max_y_diff = max(log(df$cv-df$unique))
 
-    p = ggplot(df, aes(x = log(mean, 10), y = cv-unique_cv)) +
-    geom_point(size=1, alpha=0.2) +
+    df$binned_mean = .bincode(log(df$mean,10), c(seq(-4,2,1), 10))
+    p = ggplot(df, aes(x = binned_mean, y = cv-unique_cv)) +
+    geom_boxplot() + #(size=1, alpha=0.2) +
     facet_wrap(~Method,nrow=2) +
     theme_bw() + t +
     xlab("Mean expression (log10)") +
@@ -1259,16 +1195,18 @@ def plotHeatmapGSE65525(infiles,
         hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
 
         col_cols = sapply(colnames(df),
-        FUN=function(x) ifelse(grepl(".*day0", x), "red",
-                            ifelse(grepl(".*day2", x), "yellow"
-                                ,ifelse(grepl(".*day4", x), "blue",
-                                        "green"))))
+        FUN=function(x) ifelse(grepl(".*day0", x), "dodgerblue2",
+                            ifelse(grepl(".*day2", x), "darkgoldenrod1"
+                                ,ifelse(grepl(".*day4", x), "darkorchid1",
+                                        "darkolivegreen3"))))
 
         d = as.dendrogram(hclust(as.dist(1-cor(log(df+0.1),
-                                       method = "spearmn")),
+                                       method = "spearman")),
                          method = "ward.D2"))
 
-        colorCodes <- c(day0="red", day2="yellow", day4="blue", day7="green")
+        colorCodes <- c(day0="dodgerblue2", day2="darkgoldenrod1",
+                        day4="darkorchid1", day7="darkolivegreen3")
+
         groupCodes <- gsub("[A-Z]+_","",colnames(df))
         labels_colors(d) <- colorCodes[groupCodes][order.dendrogram(d)]
 
@@ -1283,12 +1221,12 @@ def plotHeatmapGSE65525(infiles,
         write.table(cluster_table, table_outfile,
                     quote=FALSE, sep="\t", row.names=FALSE)
 
-        png(gsub(".png", "_dendo.png", plot_outfile),
-            width=10, height=10, units = 'in', res = 600)
+        png(gsub(".png", "_dendo.png", plot_outfile), width=25, height=25,
+            unit="cm", res=400)
         plot(d)
         dev.off()
 
-        png(plot_outfile, width=10, height=10)
+        png(plot_outfile, width=25, height=25, unit="cm", res=400)
 
         heatmap.2(as.matrix(log(df+0.1)),
           col = hmcol, scale="none", trace="none",
@@ -1654,3 +1592,97 @@ def plotVectorsVsExpressionGSE53638(infile, outfile, PCs=4):
             print plotVectorExpression
 
             plotVectorExpression(df)
+
+
+@cluster_runnable
+def plotFacettedEditPlots(infiles, outfile):
+    ''' combine the edit distance from all samples and plot the edit
+    distances '''
+
+    def sample2experiment(sample):
+        if sample in ["SRR1058003", "SRR1058023",
+                      "SRR1058032", "SRR1058038"]:
+            return "SCRB-Seq"
+
+        elif sample in ["SRR1784310", "SRR1784313",
+                        "SRR1784314", "SRR1784315"]:
+            return "inDrop-Seq"
+
+    df = pd.DataFrame()
+    keep_columns = ["post", "post_null", "edit_distance", "method"]
+    for infile in infiles:
+        sample = os.path.basename(infile).replace(
+            "_merged_edit_distances.tsv", "")
+        tmp_df = pd.read_table(infile, usecols=keep_columns)
+        tmp_df['sample'] = sample
+        tmp_df['experiment'] = sample2experiment(sample)
+        df = pd.concat((df, tmp_df))
+
+    df.to_csv(outfile, sep="\t")
+
+    plotFacettedEditDistance = R('''
+    function(df, samples, plotfile){
+    library(ggplot2)
+    library(reshape)
+    library(plyr)
+    library(grid)
+
+    df = df[df$edit_distance!="Single_UMI",]
+    df$edit_distance = as.numeric(as.character(df$edit_distance))
+    df_null = df[df$method=="Unique",]
+    df_null$method="Null"
+    df_null$post = df_null$post_null
+    df = rbind(df, df_null)
+
+    max_distance = max(df$edit_distance)
+    col_range = topo.colors(max_distance, alpha = 0.9)
+
+    df = df[df$edit_distance<max_distance,]
+    df = df[order(df$edit_distance),]
+
+    l_txt = element_text(size=35)
+
+    df$method = factor(df$method,
+                       levels=c("Unique", "Percentile", "Cluster",
+                                "Adjacency", "Directional",
+                                "Null"))
+
+    p = ggplot(df, aes(y=post, x=method)) +
+
+        geom_bar(aes(fill=as.factor(edit_distance), colour="grey50"),
+                     stat="identity", position="fill", width=1) +
+
+        xlab("") +
+
+        ylab("Fraction") +
+
+        scale_fill_manual(name="Edit distance", values=col_range) +
+
+        scale_colour_manual(guide="none", values="grey80") +
+
+        theme_bw() +
+
+        theme(axis.text.y=l_txt,
+              axis.text.x=element_text(size=35, angle=90,
+                                       hjust=1, vjust=0.5),
+              axis.title.x=l_txt, axis.title.y=l_txt,
+              strip.background = element_rect(colour="grey60", fill="grey90"),
+              legend.text=l_txt, strip.text=l_txt,
+              legend.title=l_txt,
+              panel.margin = unit(1, "lines"),
+              legend.position="right",
+              legend.key.size=unit(2, "line"),
+              aspect.ratio=1,
+              panel.grid.major = element_blank(),
+              panel.grid.minor = element_blank()) +
+
+        facet_grid(experiment~sample) +
+
+    ggsave(plotfile, width=(7*samples), height=10)
+    }''')
+
+    for experiment in set(df['experiment'].tolist()):
+        tmp_df = df[df['experiment'] == experiment]
+        samples = set(tmp_df['sample'].tolist())
+        plotfile = P.snip(outfile, ".tsv") + "_%s.png" % experiment
+        plotFacettedEditDistance(tmp_df, len(samples), plotfile)

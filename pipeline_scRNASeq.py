@@ -88,6 +88,8 @@ import os
 import urllib
 import sqlite3
 from bs4 import BeautifulSoup
+import pandas as pd
+from rpy2.robjects import r as R
 
 import CGAT.Experiment as E
 import CGATPipelines.Pipeline as P
@@ -485,7 +487,7 @@ def plotVectorsVsExpressionGSE53638(infile, outfile):
     ''' plot Vectors vs Expression for first x PCs for each dedup method '''
 
     PipelineScRNASeq.plotVectorsVsExpressionGSE53638(
-        infile, outfile, submit=False)
+        infile, outfile, submit=True)
 
 
 @collate(mergeCountsGSE53638,
@@ -563,7 +565,7 @@ def extractUMIsAndFilterGSE65525(infile, outfiles):
     barcodes1_infile = "data/gel_barcode1_list.txt"
     barcodes2_infile = "data/gel_barcode2_list.txt"
 
-    sample = P.snip(os.path.basename(infile), "_fastq.gz")
+    sample = P.snip(os.path.basename(infile), "_1.fastq.gz")
 
     # These are the number of cell barcodes according to Klein et al
     sample2cellbarcodes = {
@@ -915,9 +917,30 @@ def GSE65525():
 # Section END
 ###############################################################################
 
+# Combined edit distance plot
+@mkdir("paper_figures.dir")
+@merge((mergeAndPlotEditDistancesGSE65525,
+        mergeAndPlotEditDistancesGSE53638),
+       "paper_figures.dir/facetted_edit_distances.tsv")
+def plotFacettedEditPlots(infiles, outfile):
+    ''' combine the edit distance from all samples and plot the edit
+    distances '''
+
+    # we just want the first file (.tsv)
+    infiles = [x[0] for x in infiles]
+
+    PipelineScRNASeq.plotFacettedEditPlots(
+        infiles, outfile, submit=False)
+
+
+@follows(plotFacettedEditPlots)
+def combinedPlots():
+    pass
+
 
 @follows(GSE65525,
-         GSE53638)
+         GSE53638,
+         plotFacettedEditPlots)
 def full():
     pass
 
