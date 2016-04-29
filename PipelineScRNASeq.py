@@ -1,5 +1,5 @@
 '''
-PipelineUMIPaper.py - Utility functions for pipeline_umi_paper.py
+PipelineScRNASeq.py - Utility functions for pipeline_scRNASeq.py
 ==============================================================
 
 :Author: Toms Smith
