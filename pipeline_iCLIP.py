@@ -168,13 +168,11 @@ import PipelineUMI
 # load options from the config file
 import CGATPipelines.Pipeline as P
 P.getParameters(
-    ["%s.ini" % __file__[:-len(".py")],
+    ["%s/pipeline.ini" % __file__[:-len(".py")],
      "../pipeline.ini",
      "pipeline.ini"])
 
 PARAMS = P.PARAMS
-PARAMS_ANNOTATIONS = P.peekParameters(PARAMS["annotations_dir"],
-                                      "pipeline_annotations.py")
 
 PARAMS["pipeline_src"] = os.path.dirname(__file__)
 
@@ -449,16 +447,6 @@ def load_node_counts(infiles, outfile):
 
 
 ###################################################################
-@follows(loadEditDistances,
-         load_topologies,
-         load_node_counts)
-def get_dedup_stats():
-    pass
-
-
-###################################################################
-# Analyses and clusters etc
-###################################################################
 @collate(dedup_bams,
          regex("(.+/.+-.+)-(R[0-9]+)(.*).bam"),
          r"\1-agg\3.bam")
@@ -513,6 +501,39 @@ def load_read_counts(infile, outfile):
     P.load(infile, outfile, options="-i method -i track")
 
 
+###################################################################
+@follows(loadEditDistances,
+         load_topologies,
+         load_node_counts,
+         load_read_counts)
+def get_dedup_stats():
+    pass
+
+
+###################################################################
+@follows(mkdir("plots"), mkdir("notebooks"),
+         get_dedup_stats)
+@transform([os.path.join(PARAMS["pipeline_src"], x)
+            for x in ["notebooks/Fig1b_2a-Edit_distance_dists.ipynb",
+                      "notebooks/Fig1c-Read_depth_and_errors.ipynb"]],
+           regex(".+/(notebooks/.+).ipynb"),
+           r"\1.html")
+def runNotebooks1(infile, outfile):
+    '''Run notebooks and generate figures upto this point'''
+
+    ipynb_file = os.path.basename(infile)
+
+    statement = '''cp %(infile)s %(ipynb_file)s; checkpoint;
+                   ipython nbconvert --to=html
+                                     --output=%(outfile)s
+                                     --execute
+                                     %(ipynb_file)s > %(outfile)s.log'''
+
+    P.run()
+
+
+###################################################################
+# Analyses and clusters etc
 ###################################################################
 @transform([dedup_bams, mergeBamsByRep],
            regex("(.+/.+).bam"),
@@ -723,6 +744,29 @@ def base_level_reproducibility():
 
 
 ###################################################################
+@follows(mkdir("plots"), mkdir("notebooks"),
+         get_dedup_stats,
+         base_level_reproducibility,
+         exon_level_correlation,
+         clusters)
+@transform(os.path.join(PARAMS["pipeline_src"], "notebooks/*.ipynb"),
+           regex(".+/(notebooks/.+).ipynb"),
+           r"\1.html")
+def runNotebooks2(infile, outfile):
+    '''Run all notebooks and generate figures'''
+
+    ipynb_file = os.path.basename(infile)
+
+    statement = '''cp %(infile)s %(ipynb_file)s; checkpoint;
+                   ipython nbconvert --to=html
+                                     --output=%(outfile)s
+                                     --execute
+                                     %(ipynb_file)s > %(outfile)s.log'''
+
+    P.run()
+
+
+###################################################################
 ###################################################################
 ###################################################################
 ## primary targets
@@ -732,7 +776,8 @@ def base_level_reproducibility():
          load_read_counts,
          clusters,
          exon_level_correlation,
-         base_level_reproducibility)
+         base_level_reproducibility,
+         runNotebooks2)
 def full():
     pass
 
