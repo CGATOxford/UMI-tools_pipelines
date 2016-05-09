@@ -42,7 +42,7 @@ For each data set (SCRB-Seq & inDrop), the following steps are performed:
 - Duplicate reads removed using umi-tools dedup
 - Reads per gene counted
 - UMI Edit distances plotted
-- PCA. hierachical clustering and heatmaps plotted
+- PCA, hierachical clustering and heatmaps
 
 Configuration
 -------------
@@ -65,14 +65,17 @@ First configure as described above then run the pipeline by executing:
 Input files
 -----------
 
-None required except the pipeline configuration files.
+The pipeline requires the barcode files for the Soumillon et al and
+Klein et al data sets. In addition, a file containing the ERCC spike
+ins is also required. These are all provided in the repository.
+
 
 Requirements
 ------------
 
-The pipeline requires the results from
-:doc:`pipeline_annotations`. Set the configuration variable
-:py:data:`annotations_database` and :py:data:`annotations_dir`.
+The pipeline requires the output from the CGAT pipeline,
+pipeline_annotations to be run with hg19, ensembl 75 and mm10, ensembl
+78.
 
 Pipeline output
 ===============
