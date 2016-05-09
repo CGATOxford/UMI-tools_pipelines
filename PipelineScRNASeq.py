@@ -1195,17 +1195,17 @@ def plotHeatmapGSE65525(infiles,
         hmcol <- colorRampPalette(brewer.pal(9, "GnBu"))(100)
 
         col_cols = sapply(colnames(df),
-        FUN=function(x) ifelse(grepl(".*day0", x), "dodgerblue2",
-                            ifelse(grepl(".*day2", x), "darkgoldenrod1"
-                                ,ifelse(grepl(".*day4", x), "darkorchid1",
-                                        "darkolivegreen3"))))
+        FUN=function(x) ifelse(grepl(".*day0", x), "grey50",
+                            ifelse(grepl(".*day2", x), "#E69F00"
+                                ,ifelse(grepl(".*day4", x), "#56B4E9",
+                                        "#F0E442"))))
 
         d = as.dendrogram(hclust(as.dist(1-cor(log(df+0.1),
                                        method = "spearman")),
                          method = "ward.D2"))
 
-        colorCodes <- c(day0="dodgerblue2", day2="darkgoldenrod1",
-                        day4="darkorchid1", day7="darkolivegreen3")
+        colorCodes <- c(day0="grey50", day2="#E69F00",
+                        day4="#56B4E9", day7="#F0E442")
 
         groupCodes <- gsub("[A-Z]+_","",colnames(df))
         labels_colors(d) <- colorCodes[groupCodes][order.dendrogram(d)]
@@ -1600,13 +1600,28 @@ def plotFacettedEditPlots(infiles, outfile):
     distances '''
 
     def sample2experiment(sample):
+        
+        sample2day ={"SRR1058003": "Day 0",
+                     "SRR1058023": "Day 14",
+                     "SRR1058032": None,
+                     "SRR1058038": None,
+                     "SRR1784310": "mES Cells",
+                     "SRR1784313": "Day 2",
+                     "SRR1784314": "Day 4",
+                     "SRR1784315": "Day 7"}
+
         if sample in ["SRR1058003", "SRR1058023",
                       "SRR1058032", "SRR1058038"]:
-            return "SCRB-Seq"
+            experiment = "SCRB-Seq"
 
         elif sample in ["SRR1784310", "SRR1784313",
                         "SRR1784314", "SRR1784315"]:
-            return "inDrop-Seq"
+            experiment = "inDrop-Seq"
+
+        day = sample2day[sample]
+
+        return day, experiment
+
 
     df = pd.DataFrame()
     keep_columns = ["post", "post_null", "edit_distance", "method"]
@@ -1614,11 +1629,14 @@ def plotFacettedEditPlots(infiles, outfile):
         sample = os.path.basename(infile).replace(
             "_merged_edit_distances.tsv", "")
         tmp_df = pd.read_table(infile, usecols=keep_columns)
-        tmp_df['sample'] = sample
-        tmp_df['experiment'] = sample2experiment(sample)
-        df = pd.concat((df, tmp_df))
+        day, experiment = sample2experiment(sample)
+        if day:
+            tmp_df['sample'] = day
+            tmp_df['experiment'] = experiment
+            df = pd.concat((df, tmp_df))
 
     df.to_csv(outfile, sep="\t")
+    df = df[df['method'].isin(["Unique", "Percentile", "Directional"])]
 
     plotFacettedEditDistance = R('''
     function(df, samples, plotfile){
@@ -1658,7 +1676,7 @@ def plotFacettedEditPlots(infiles, outfile):
 
         scale_fill_manual(name="Edit distance", values=col_range) +
 
-        scale_colour_manual(guide="none", values="grey80") +
+        scale_colour_manual(guide="none", values="grey60") +
 
         theme_bw() +
 
@@ -1671,14 +1689,14 @@ def plotFacettedEditPlots(infiles, outfile):
               legend.title=l_txt,
               panel.margin = unit(1, "lines"),
               legend.position="right",
+              aspect.ratio=1.5,
               legend.key.size=unit(2, "line"),
-              aspect.ratio=1,
               panel.grid.major = element_blank(),
               panel.grid.minor = element_blank()) +
 
         facet_grid(experiment~sample) +
 
-    ggsave(plotfile, width=(7*samples), height=10)
+    ggsave(plotfile, width=((5*samples) + 2), height=7.5)
     }''')
 
     for experiment in set(df['experiment'].tolist()):

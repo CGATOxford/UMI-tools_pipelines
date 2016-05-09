@@ -164,9 +164,7 @@ def extractUMIsAndFilterGSE53638(infile, outfiles):
     UMI_fastq = infile
     fastq = infile.replace("_1.fastq.gz", "_2.fastq.gz")
 
-    # ToDo: replace with PARAMS['soumillon_barcodes']
-    barcode_inf = "Soulmillon_et_al_2014_barcodes.tsv"
-    barcode_inf = IOTools.openFile(barcode_inf, "r")
+    barcode_inf = IOTools.openFile(PARAMS['files_soumillon_barcodes'], "r")
     barcodes = []
 
     # different barcodes for Differentiation 1 and Differentiation 3
@@ -191,7 +189,7 @@ def createERCCFastaGSE53638(outfile):
     outf = IOTools.openFile(outfile, "w")
 
     # ToDo - where the infile coming from? Parameterise infile location
-    with IOTools.openFile("data/cms_095047.txt", "r") as inf:
+    with IOTools.openFile(PARAMS['files_ercc'], "r") as inf:
         next(inf)
         for line in inf:
             id = ">" + " ". join(line.split("\t")[:-1])
@@ -219,7 +217,7 @@ def buildReferenceGeneSetGSE53638(infile, outfile):
 
     select = dbh.execute(select_cmd)
 
-    tmp_out = P.getTempFilename(shared=True)
+    tmp_out = P.getTempFilename(".")
 
     with IOTools.openFile(tmp_out, "w") as outf:
         outf.write("\n".join((x[0] for x in select)) + "\n")
@@ -235,7 +233,7 @@ def buildReferenceGeneSetGSE53638(infile, outfile):
     | python %(scriptsdir)s/gtf2gtf.py
     --method=merge-exons
     --merge-exons-distance=10
-    --with-utr
+    --mark-utr
     --log=%(outfile)s.log
     | python %(scriptsdir)s/gtf2gtf.py
     --method=set-transcript-to-gene
@@ -243,7 +241,7 @@ def buildReferenceGeneSetGSE53638(infile, outfile):
     > %(outfile)s
     '''
     P.run()
-    os.unlink(tmp_out)
+    #os.unlink(tmp_out)
 
 
 @transform(buildReferenceGeneSetGSE53638,
@@ -534,7 +532,7 @@ def downloadGSE65525(outfile):
 
     sra = P.snip(os.path.basename(outfile), ".sra")
 
-    statement = '''cd GSE65525; wget %(base_address)s/%(sra)s/%(sra)s.sra'''
+    statement = '''cd GSE65525; wget %(base)s/%(sra)s/%(sra)s.sra'''
 
     P.run()
 
@@ -560,8 +558,8 @@ def extractUMIsAndFilterGSE65525(infile, outfiles):
     UMI_fastq = infile
     fastq = infile.replace("_1.fastq.gz", "_2.fastq.gz")
 
-    barcodes1_infile = "data/gel_barcode1_list.txt"
-    barcodes2_infile = "data/gel_barcode2_list.txt"
+    barcodes1_infile = PARAMS['files_barcodes1']
+    barcodes2_infile = PARAMS['files_barcodes2']
 
     sample = P.snip(os.path.basename(infile), "_1.fastq.gz")
 
@@ -627,7 +625,7 @@ def buildReferenceGeneSetGSE65525(infile, outfile):
 
     select = dbh.execute(select_cmd)
 
-    tmp_out = P.getTempFilename(shared=True)
+    tmp_out = P.getTempFilename(".")
 
     with IOTools.openFile(tmp_out, "w") as outf:
         outf.write("\n".join((x[0] for x in select)) + "\n")
@@ -643,7 +641,7 @@ def buildReferenceGeneSetGSE65525(infile, outfile):
     | python %(scriptsdir)s/gtf2gtf.py
     --method=merge-exons
     --merge-exons-distance=10
-    --with-utr
+    --mark-utr
     --log=%(outfile)s.log
     | python %(scriptsdir)s/gtf2gtf.py
     --method=set-transcript-to-gene
@@ -869,7 +867,7 @@ def plotHeatmapsGSE65525(infiles, outfile):
     ''' plot heatmaps for each dedup method'''
     print infiles, outfile
 
-    PipelineScRNASeq.plotHeatmapGSE65525(
+    PipelineScRNASeq.bplotHeatmapGSE65525(
         infiles, outfile, submit=True, job_memory="2G")
 
 
