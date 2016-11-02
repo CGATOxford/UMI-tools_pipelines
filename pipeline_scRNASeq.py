@@ -264,7 +264,7 @@ def buildReferenceTranscriptomeGSE53638(infile, outfile):
     '''
     P.run()
 
-    dest = P.snip(os.path.abspath(gtf_file), ".gtf") + ".gff"
+    dest = P.snip(os.path.abspath(gtf_file), ".gtf")) + ".gff"
     if not os.path.exists(dest):
         os.symlink(os.path.abspath(gtf_file), dest)
 
@@ -441,17 +441,6 @@ def mergeAndPlotEditDistancesGSE53638(infiles, outfiles):
         infiles, outfile, plot_out, submit=True)
 
 
-@collate(mergeCountsGSE53638,
-         regex("GSE53638/figures.dir/dedup_(\S+)_(\S+)_merged_gene_counts.tsv"),
-         [r"GSE53638/figures.dir/\2_ERCC_sd.png",
-          r"GSE53638/figures.dir/\2_ERCC_mean.png"])
-def plotERCCAccuracyGSE53638(infiles, outfiles):
-    ''' merge the counts tables per sample, select the ERCC spike ins and
-    plot'''
-
-    PipelineScRNASeq.plotERCCAccuracy(infiles, outfiles, submit=True)
-
-
 @merge(mergeCountsGSE53638,
        "GSE53638/figures.dir/heatmap.log")
 def plotHeatmapsGSE53638(infiles, outfile):
@@ -497,7 +486,6 @@ def plotCVGSE53638(infiles, plotfile):
 @follows(countGenesGSE53638,
          mergeAndPlotEditDistancesGSE53638,
          mergeCountsGSE53638,
-         plotERCCAccuracyGSE53638,
          plotHeatmapsGSE53638,
          plotCVGSE53638,
          plotVarianceGSE53638,
