@@ -349,7 +349,7 @@ def mapBWAAgainstGenesetGSE53638(infiles, outfile):
          mkdir("GSE53638/dedup_percentile.dir"),
          mkdir("GSE53638/dedup_cluster.dir"),
          mkdir("GSE53638/dedup_adjacency.dir"),
-         mkdir("GSE53638/dedup_directional_adjacency.dir"),
+         mkdir("GSE53638/dedup_directional.dir"),
          mapBWAAgainstGenesetGSE53638)
 @subdivide(mapBWAAgainstGenesetGSE53638,
            regex("GSE53638/transcriptome.dir/(\S+)_UMI_(\S+).trans.bam"),
@@ -357,7 +357,7 @@ def mapBWAAgainstGenesetGSE53638(infiles, outfile):
             r"GSE53638/dedup_percentile.dir/\1_UMI_\2_deduped.trans.bam",
             r"GSE53638/dedup_cluster.dir/\1_UMI_\2_deduped.trans.bam",
             r"GSE53638/dedup_adjacency.dir/\1_UMI_\2_deduped.trans.bam",
-            r"GSE53638/dedup_directional_adjacency.dir/\1_UMI_\2_deduped.trans.bam"])
+            r"GSE53638/dedup_directional.dir/\1_UMI_\2_deduped.trans.bam"])
 def dedupGSE53638(infile, outfiles):
     ''' perform deduping with various methods'''
 
@@ -367,10 +367,7 @@ def dedupGSE53638(infile, outfiles):
 
         method = P.snip(os.path.basename(
             os.path.dirname(outfile).replace("dedup_", "")), ".dir")
-        
-        if method == "directional_adjacency":
-            method = "directional-adjacency"
-        
+                
         if method == "cluster":
             options = "--further-stats"
         else:
@@ -716,7 +713,7 @@ def mapBowtieAgainstTranscriptomeGSE65525(infiles, outfile):
          mkdir("GSE65525/dedup_percentile.dir"),
          mkdir("GSE65525/dedup_cluster.dir"),
          mkdir("GSE65525/dedup_adjacency.dir"),
-         mkdir("GSE65525/dedup_directional_adjacency.dir"),
+         mkdir("GSE65525/dedup_directional.dir"),
          mapBowtieAgainstTranscriptomeGSE65525)
 @subdivide(mapBowtieAgainstTranscriptomeGSE65525,
            regex("GSE65525/transcriptome.dir/(\S+)_UMI_(\S+).trans.bam"),
@@ -724,7 +721,7 @@ def mapBowtieAgainstTranscriptomeGSE65525(infiles, outfile):
             r"GSE65525/dedup_percentile.dir/\1_UMI_\2_deduped.trans.bam",
             r"GSE65525/dedup_cluster.dir/\1_UMI_\2_deduped.trans.bam",
             r"GSE65525/dedup_adjacency.dir/\1_UMI_\2_deduped.trans.bam",
-            r"GSE65525/dedup_directional_adjacency.dir/\1_UMI_\2_deduped.trans.bam"])
+            r"GSE65525/dedup_directional.dir/\1_UMI_\2_deduped.trans.bam"])
 def dedupGSE65525(infile, outfiles):
     ''' perform deduping with various methods'''
 
@@ -735,8 +732,8 @@ def dedupGSE65525(infile, outfiles):
         method = P.snip(os.path.basename(
             os.path.dirname(outfile).replace("dedup_", "")), ".dir")
         
-        if method == "directional_adjacency":
-            method = "directional-adjacency"
+        if method == "directional":
+            method = "directional"
 
         if method == "adjacency":
             stats_cmd = ("--output-stats=%(outfile)s.stats "

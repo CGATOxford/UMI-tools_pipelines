@@ -164,7 +164,7 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
 
     plot_out2 = P.snip(plot_out, ".png") + "_unique_only.png"
     plot_out3 = P.snip(plot_out, ".png") + "_cluster_only.png"
-    plot_out4 = P.snip(plot_out, ".png") + "_dir_adj_only.png"
+    plot_out4 = P.snip(plot_out, ".png") + "_dir_only.png"
 
     final_df = pd.DataFrame()
 
@@ -183,9 +183,6 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
                                for x in tmp_post_df.columns]
         pre_null_df[dedup_method] = tmp_df["unique_null"]
         dedup_method = dedup_method.title()
-
-        if dedup_method == "Directional_Adjacency":
-            dedup_method = "Directional"
 
         tmp_post_df['method'] = dedup_method
 
@@ -257,7 +254,7 @@ def mergeAndPlotEditDistances(infiles, outfile, plot_out):
 
     ggsave("%(plot_out3)s", width=10, height=8)
 
-    p4 = ggplot(df[(df$method=="Directional_Adjacency") | (df$method=="Null"),]) +
+    p4 = ggplot(df[(df$method=="Directional") | (df$method=="Null"),]) +
          a + b + y + x + theme_bw() + s_f + t + x_no_angle + s_c
 
     ggsave("%(plot_out4)s", width=10, height=8)
@@ -994,7 +991,7 @@ def plotCV(infiles, plotfile, normalise_method):
 
     df$Method = factor(df$Method, levels=c("None", "Unique", "Percentile",
                                            "Cluster", "Adjacency",
-                                           "Directional_Adjacency"))
+                                           "Directional"))
 
     t = theme(axis.text.x = m_txt,
               axis.text.y = m_txt,
@@ -1032,7 +1029,7 @@ def plotCV(infiles, plotfile, normalise_method):
     ggsave("%(plotfile2)s", width=15, height=10)
 
     methods_keep = c("Percentile", "Cluster",
-                     "Adjacency", "Directional_Adjacency")
+                     "Adjacency", "Directional")
 
     df = df[df$Method %%in%% methods_keep,]
 
@@ -1367,7 +1364,7 @@ def plotVarianceGSE65525(infiles, outfile, PCs=10):
 
     df$method = factor(df$method,
                        levels=c("transcriptome", "unique", "percentile",
-                                "cluster", "adjacency", "directional_adjacency"))
+                                "cluster", "adjacency", "directional"))
 
     p = ggplot(df, aes(PC, 100*cumsum, col=as.factor(method), group=method)) +
     geom_line() + theme_bw() + t +
@@ -1375,7 +1372,7 @@ def plotVarianceGSE65525(infiles, outfile, PCs=10):
     xlab("PC") +
     scale_colour_discrete(name="Method",
                           labels=c("None", "Unique", "Percentile",
-                                   "Cluster", "Adjacency", "Directional Adjacency")) +
+                                   "Cluster", "Adjacency", "Directional")) +
     scale_x_continuous(limits=c(1,6), breaks=seq(1,10,1)) +
     scale_y_continuous(limits=c(0,11), breaks=seq(0,11,1))
 
@@ -1443,7 +1440,7 @@ def plotVarianceGSE53638(infile, outfile, PCs=10):
     df$method = factor(df$method,
                        levels=c("unique", "percentile",
                                 "cluster", "adjacency",
-                                "directional_adjacency"))
+                                "directional"))
 
     p = ggplot(df, aes(PC, 100*cumsum, col=method, group=method)) +
     geom_line() + theme_bw() + t +
@@ -1451,7 +1448,7 @@ def plotVarianceGSE53638(infile, outfile, PCs=10):
     xlab("PC") +
     scale_colour_discrete(name="Method",
                           labels=c("Unique", "Percentile",
-                                   "Cluster", "Adjacency", "Directional Adjacency")) +
+                                   "Cluster", "Adjacency", "Directional")) +
     scale_x_continuous(limits=c(1,6), breaks=seq(1,6,1)) +
     scale_y_continuous(limits=c(0,12), breaks=seq(0,12,1))
 

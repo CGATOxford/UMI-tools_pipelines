@@ -344,8 +344,7 @@ def run_mapping(infile, outfile):
 # Deduping, Counting, etc
 ###################################################################
 # dedup methods
-METHODS = ["unique", "cluster", "percentile", "adjacency",
-           "directional-adjacency"]
+METHODS = ["unique", "cluster", "percentile", "adjacency", "directional"]
 
 
 ###################################################################
