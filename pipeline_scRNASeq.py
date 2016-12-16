@@ -80,15 +80,10 @@ Code
 from ruffus import *
 import sys
 import os
-import urllib
-import sqlite3
-from bs4 import BeautifulSoup
-
 import CGAT.Experiment as E
 import CGATPipelines.Pipeline as P
 import CGAT.Sra as SRA
 import CGAT.IOTools as IOTools
-import CGAT.FastaIterator as FastaIterator
 
 import CGATPipelines.PipelinePreprocess as PipelinePreprocess
 import CGATPipelines.PipelineMapping as PipelineMapping
