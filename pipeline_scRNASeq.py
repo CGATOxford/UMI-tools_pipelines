@@ -20,8 +20,7 @@
 #   along with this program; if not, write to the Free Software
 #   Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ###############################################################################
-"""
-===========================
+"""===========================
 Pipeline scRNA-Seq
 ===========================
 
@@ -66,16 +65,8 @@ Input files
 -----------
 
 The pipeline requires the barcode files for the Soumillon et al and
-Klein et al data sets. In addition, a file containing the ERCC spike
-ins is also required. These are all provided in the repository.
-
-
-Requirements
-------------
-
-The pipeline requires the output from the CGAT pipeline,
-pipeline_annotations to be run with hg19, ensembl 75 and mm10, ensembl
-78.
+Klein et al data sets and for each data set, a fasta containing gene
+and ERCC sequeces.These are all provided in the repository.
 
 Pipeline output
 ===============
@@ -115,14 +106,6 @@ P.getParameters(
     only_import=__name__ != "__main__")
 
 PARAMS = P.PARAMS
-
-
-def makeSoup(address):
-    sock = urllib.urlopen(address)
-    htmlSource = sock.read()
-    soup = BeautifulSoup(htmlSource)
-    return soup
-
 
 ###############################################################################
 # Section - START - GSE53638 - Soumillon et al 2014
@@ -185,122 +168,10 @@ def extractUMIsAndFilterGSE53638(infile, outfiles):
                                                submit=True)
 
 
-@originate("GSE53638/ERCC.fasta")
-def createERCCFastaGSE53638(outfile):
-    ''' Create fasta file from ERCC spike in txt file'''
-
-    outf = IOTools.openFile(outfile, "w")
-
-    with IOTools.openFile(PARAMS['files_ercc'], "r") as inf:
-        next(inf)
-        for line in inf:
-            id = ">" + " ". join(line.split("\t")[:-1])
-            seq = line.split("\t")[-1]
-            split_at = 60
-            seq = [seq[i:i+split_at] for i in range(0, len(seq), split_at)]
-            outf.write("%s\n%s" % (id, "\n".join(seq)))
-
-
-@follows(mkdir("GSE53638/geneset.dir"))
-@merge("/ifs/mirror/annotations/hg19_ensembl75/geneset_all.gtf.gz",
-       "GSE53638/geneset.dir/reference.gtf.gz")
-def buildReferenceGeneSetGSE53638(infile, outfile):
-    '''filter to protein-coding transcripts and merge transcripts'''
-
-    # Returns an sqlite3 database handle.
-    dbh = sqlite3.connect(PARAMS['soumillon_annotations_database'])
-
-    select_cmd = """
-    SELECT DISTINCT transcript_id from transcript_info
-    WHERE gene_biotype = 'protein_coding'
-    AND transcript_biotype = 'protein_coding'
-    """ % locals()
-
-    select = dbh.execute(select_cmd)
-
-    tmp_out = P.getTempFilename(".")
-
-    with IOTools.openFile(tmp_out, "w") as outf:
-        outf.write("\n".join((x[0] for x in select)) + "\n")
-    outf.close()
-
-    statement = '''
-    zcat %(infile)s
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=filter
-    --filter-method=transcript
-    --map-tsv-file=%(tmp_out)s
-    --log=%(outfile)s.log
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=merge-exons
-    --merge-exons-distance=10
-    --mark-utr
-    --log=%(outfile)s.log
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=set-transcript-to-gene
-    | gzip
-    > %(outfile)s
-    '''
-    P.run()
-    os.unlink(tmp_out)
-
-
-@transform(buildReferenceGeneSetGSE53638,
-           suffix(".gtf.gz"),
-           ".fa")
-def buildReferenceTranscriptomeGSE53638(infile, outfile):
-    '''build reference transcriptome'''
-
-    gtf_file = P.snip(infile, ".gz")
-
-    genome_file = PARAMS['soumillon_genome_fasta'
-
-    statement = '''
-    zcat %(infile)s
-    | awk '$3~/exon|UTR/' > %(gtf_file)s;
-    gtf_to_fasta %(gtf_file)s %(genome_file)s %(outfile)s;
-    checkpoint;
-    samtools faidx %(outfile)s
-    '''
-    P.run()
-
-    dest = P.snip(os.path.abspath(gtf_file), ".gtf")) + ".gff"
-    if not os.path.exists(dest):
-        os.symlink(os.path.abspath(gtf_file), dest)
-
-
-@merge([createERCCFastaGSE53638,
-        buildReferenceTranscriptomeGSE53638],
-       "GSE53638/geneset.dir/refcoding_plus_ERCC.fa")
-def mergeReferenceTranscriptomeERCCGSE53638(infiles, outfile):
-    ''' merge fasta from reference transcriptome with ERCC spike in fasta and mitochondrial DNA'''
-
-    mtGenome = P.getTempFilename()
-
-    # Extract Mt chromosome
-    FastaIt = FastaIterator.FastaIterator(
-        IOTools.openFile(PARAMS['soumillon_genome_fasta'], "r"),
-        split=60)
-
-    with IOTools.openFile(mtGenome, "w") as outf:
-        for entry in FastaIt:
-            if entry.title == "chrM":
-                outf.write("%s\n" % entry)
-
-    ERCC, reference = infiles
-
-    # sed command ensures fasta entries are correctly labelled
-    statement = '''
-    cat %(ERCC)s %(reference)s %(mtGenome)s |
-    sed 's/>[0-9]\+ />/g' > %(outfile)s;
-    samtools faidx %(outfile)s'''
-    P.run()
-
-
-@transform(mergeReferenceTranscriptomeERCCGSE53638,
+@transform(PARAMS['soumillon_fasta'],
            suffix(".fa"),
            ".sa")
-def indexMergedFastaGSE53638(infile, outfile):
+def indexFastaGSE53638(infile, outfile):
     ''' build BWA index for merged fasta'''
 
     prefix = P.snip(outfile, ".sa")
@@ -313,10 +184,10 @@ def indexMergedFastaGSE53638(infile, outfile):
 
 
 @mkdir("GSE53638/transcriptome.dir")
-@follows(indexMergedFastaGSE53638)
+@follows(indexFastaGSE53638)
 @transform(extractUMIsAndFilterGSE53638,
            regex("GSE53638/fastqs.dir/(\S+)_UMI_(\S+).fastq.gz"),
-           add_inputs(indexMergedFastaGSE53638),
+           add_inputs(indexFastaGSE53638),
            r"GSE53638/transcriptome.dir/\1_UMI_\2.trans.bam")
 def mapBWAAgainstGenesetGSE53638(infiles, outfile):
     ''' map reads using BWA against transcriptome data
@@ -537,8 +408,8 @@ def extractUMIsAndFilterGSE65525(infile, outfiles):
     UMI_fastq = infile
     fastq = infile.replace("_1.fastq.gz", "_2.fastq.gz")
 
-    barcodes1_infile = PARAMS['files_barcodes1']
-    barcodes2_infile = PARAMS['files_barcodes2']
+    barcodes1_infile = PARAMS['klein_barcodes1']
+    barcodes2_infile = PARAMS['klein_barcodes2']
 
     sample = P.snip(os.path.basename(infile), "_1.fastq.gz")
 
@@ -585,78 +456,7 @@ def processReadsGSE65525(infile, outfile):
     P.run()
 
 
-@follows(mkdir("GSE65525/geneset.dir"))
-@merge("/ifs/mirror/annotations/mm10_ensembl78/ensembl.dir/geneset_all.gtf.gz",
-       "GSE65525/geneset.dir/reference.gtf.gz")
-def buildReferenceGeneSetGSE65525(infile, outfile):
-    '''filter to protein-coding transcripts and merge transcripts'''
-
-    # Returns an sqlite3 database handle
-    dbh = sqlite3.connect(PARAMS['klein_annotations_database'])
-
-    select_cmd = """
-    SELECT DISTINCT transcript_id from transcript_info
-    WHERE gene_biotype = 'protein_coding'
-    AND transcript_biotype = 'protein_coding'
-    """ % locals()
-
-    select = dbh.execute(select_cmd)
-
-    tmp_out = P.getTempFilename(".")
-
-    with IOTools.openFile(tmp_out, "w") as outf:
-        outf.write("\n".join((x[0] for x in select)) + "\n")
-    outf.close()
-
-    statement = '''
-    zcat %(infile)s
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=filter
-    --filter-method=transcript
-    --map-tsv-file=%(tmp_out)s
-    --log=%(outfile)s.log
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=merge-exons
-    --merge-exons-distance=10
-    --mark-utr
-    --log=%(outfile)s.log
-    | python %(scriptsdir)s/gtf2gtf.py
-    --method=set-transcript-to-gene
-    | gzip
-    > %(outfile)s
-    '''
-    P.run()
-    os.unlink(tmp_out)
-
-
-@transform(buildReferenceGeneSetGSE65525,
-           suffix(".gtf.gz"),
-           ".fa")
-def buildReferenceTranscriptomeGSE65525(infile, outfile):
-    '''build reference transcriptome'''
-
-    gtf_file = P.snip(infile, ".gz")
-
-    genome_file = PARAMS['klein_genome_fasta']
-
-    # sed command ensures fasta entries are correctly labelled
-    statement = '''
-    zcat %(infile)s
-    | awk '$3~/exon|UTR/' > %(gtf_file)s;
-    gtf_to_fasta %(gtf_file)s %(genome_file)s %(outfile)s;
-    checkpoint;
-    sed -i 's/>[0-9]\+ />/g' %(outfile)s;
-    checkpoint;
-    samtools faidx %(outfile)s
-    '''
-    P.run()
-
-    dest = P.snip(os.path.abspath(gtf_file), ".gtf") + ".gff"
-    if not os.path.exists(dest):
-        os.symlink(os.path.abspath(gtf_file), dest)
-
-
-@transform(buildReferenceTranscriptomeGSE65525,
+@transform(PARAMS['klein_fasta'],
            suffix(".fa"),
            ".1.ebwt")
 def indexFastaGSE65525(infile, outfile):
