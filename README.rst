@@ -18,9 +18,7 @@ To run the scRNA-Seq pipeline, create a new directory and copy the files in the 
    cp [UMI-Tool_pipelines git directory]/pipeline_scRNASeq/* scRNA_seq
    cd scRNA_seq
 
-Then run the CGATPipeline pipeline_annotations for hg19, ensembl 75
-and mm10, ensembl 78 and update the scRNA_seq pipeline.ini with the
-locations of the annotations databases. Then run:
+Then run:
 
 .. code:: bash
 
