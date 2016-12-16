@@ -1,0 +1,9 @@
+# notebook checkpoints
+notebooks/.ipynb_checkpoints
+.ipynb_checkpoints
+
+# simulation results
+notebooks/simulation_*.tsv
+figures.dir
+
+*.pyc
