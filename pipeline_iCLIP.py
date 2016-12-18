@@ -175,7 +175,8 @@ iCLIP pipeline is expecting that all reads
 associated with a sample are in the same fastq file.
 
 In addition to the fastq files, a table of barcodes and samples is required as
-sample_table.tsv.
+sample_table.tsv. The data directory of the reposiotry contains these for
+the SRSF and TDP data. 
 
 It has four columns:
 
@@ -832,7 +833,8 @@ def base_level_reproducibility():
          base_level_reproducibility,
          exon_level_correlation,
          clusters)
-@transform(os.path.join(PARAMS["pipeline_src"], "notebooks/*.ipynb"),
+@transform([os.path.join(PARAMS["pipeline_src"], "notebooks/Fig*.ipynb"),
+            os.path.join(PARAMS["pipeline_src"], "notebooks/Examine*.ipynb")],
            regex(".+/(notebooks/.+).ipynb"),
            r"\1.html")
 def runNotebooks2(infile, outfile):
