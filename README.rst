@@ -28,7 +28,7 @@ Then run:
 
 .. code:: bash
 
-   python [UMI-Tool_pipelines git directory]/PipelineScRNASeq.py -v10 make full
+   python [UMI-Tool_pipelines git directory]/pipeline_ScRNASeq.py -v10 make full
 
 iCLIP Analysis
 ---------------
