@@ -266,20 +266,19 @@ import PipelineUMI
 
 # load options from the config file
 import CGATPipelines.Pipeline as P
+P.PARAMS["pipeline_src"] = os.path.dirname(__file__)
 P.getParameters(
     ["%s/pipeline.ini" % __file__[:-len(".py")],
      "../pipeline.ini",
      "pipeline.ini"])
 
 PARAMS = P.PARAMS
-
-PARAMS["pipeline_src"] = os.path.dirname(__file__)
 if '%' in PARAMS["sample_table"]:
-    PARAMS["sample_table"] = PARAMS["sample_table"] % PARAMS
+    PARAMS["sample_table"] = PARAMS["sample_table"] % PARAMS["pipeline_src"]
 if '%' in PARAMS["annotations_gtf"]:
-    PARAMS["annotations_gtf"] = PARAMS["annotations_gtf"] % PARAMS
+    PARAMS["annotations_gtf"] = PARAMS["annotations_gtf"] % PARAMS["pipeline_src"]
 if '%' in PARAMS["annotations_contigs"]:
-    PARAMS["annotations_contigs"] = PARAMS["annotations_contgs"] % PARAMS
+    PARAMS["annotations_contigs"] = PARAMS["annotations_contigs"] % PARAMS["pipeline_src"]
 
 ###################################################################
 ###################################################################
