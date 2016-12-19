@@ -352,7 +352,7 @@ def generateReaperMetaData(infile, outfile):
 ###################################################################
 @follows(loadUMIStats, generateReaperMetaData)
 @subdivide(extractUMI, regex(".+/(.+).fastq.umi_trimmed.gz"),
-           add_inputs(r"\1_reaper_metadata.tsv", "sample_table.tsv"),
+           add_inputs(r"\1_reaper_metadata.tsv", PARAMS["sample_table"]),
            r"demux_fq/*_\1.fastq.gz")
 def demux_fastq(infiles, outfiles):
     '''Demultiplex each fastq file into a seperate file for each
