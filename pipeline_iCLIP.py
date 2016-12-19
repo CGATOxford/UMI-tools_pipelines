@@ -289,7 +289,7 @@ if '%' in PARAMS["annotations_contigs"]:
 # Read preparation
 ###################################################################
 @jobs_limit(1, "db")
-@transform("sample_table.tsv", suffix(".tsv"), ".load")
+@transform(PARAMS["sample_table.tsv"], suffix(".tsv"), ".load")
 def loadSampleInfo(infile, outfile):
 
     P.load(infile, outfile,
