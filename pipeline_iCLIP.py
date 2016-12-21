@@ -26,20 +26,44 @@ Pipeline iCLIP
 ===========================
 
 :Author: Ian Sudbery
-:Release: $Id$
-:Date: |today|
+:Release: 0.0.1
+:Date: 18/12/2016
 :Tags: Python
 
-A pipeline template.
+
 
 Overview
 ========
+This pipeline executes analysis to produce the results in 
+in Smith *et al* 2017 that deal with iCLIP data. The pipeline runs in a simiar 
+way to a make pipeline. Once run, the pipeline will
+automatically create a succession of jobs that run the required analysis tasks.
+At each step the pipeline tests if the input files for a task exist, if do, the
+date stamps on the output files are compared to the input files and if the input
+flies are newer, the task is run to regenerate the output files. If the input
+files are not present, they task that generates them is activated. 
 
 Usage
 =====
 
-See :ref:`PipelineSettingUp` and :ref:`PipelineRunning` on general information how to use
-CGAT pipelines.
+Initialize the pipeline by creating a directory with the input files (see input below) 
+and running::
+    python PATH_TO_SRC/pipeline_iCLIP.py config
+
+This will copy the required configuration files into the directory (see configuration)
+below. Once setup and configured (see below) the pipeline is executed
+with::
+    python PATH_TO_SRC/pipeline_iCLIP.py make full
+
+By default the pipeline will attempt to use drmaa to execute pipeline tasks
+on a cluster. The default cluster manager is SGE, but SLRUM is also possible. 
+Cluster execution is the most efficient way to run the pipeline, and on our
+system, running 100 cluster jobs, allocating 12 cores to each bowtie run and 6 
+cores to each peakcalling run the pipeline takes 50 hours. It is also 
+possible to run without a cluster by specifying the `--no-cluster` option. The 
+number of concurent jobs to be run can be set with `-p`. Running a single 
+job on a local machine, we estimate that the pipeline could take several 
+months to run, and would require at least 32GB of RAM. 
 
 Configuration
 -------------
@@ -49,7 +73,10 @@ values will produce the analyses in the paper for the most part, but some
 site specific values must be set:
 
 * The location of the bowtie or star index files and reference genome
-* The location of a GTF file with the relevant gene annotation
+* The location of a GTF file with the relevant gene annotation. The files used
+  for the SRSF analysis are included in the data directory of the repository,
+  edit the configuration variables to point to this. (there are defaults set
+  for this)
 * Site specific cluster parameters. We assume you are using SGE, you may
   wish to set:
     * *queue*: the queue to use on the cluster
@@ -64,13 +91,92 @@ site specific values must be set:
 Input
 -----
 
-The inputs should be fastq.gz files. The pipeline expects these to be raw fastq
-files. That is that they contain the UMIs and the barcodes still on the 5' end
-of the reads. This lite version of iCLIP pipeline is expecting that all reads
+The inputs are fastq.gz files. For the analysis of SRSF proteins the following
+fastq files were downloaded from ENA:
+    
++--------------+----------+
+|*Sample*      |*Record*  |    
++--------------+----------+
+|SRSF1-GFP-R1  |SRR2057564|
++--------------+----------+
+|SRSF1-GFP-R2  |SRR2057565|
++--------------+----------+
+|SRSF1-GFP-R3  |SRR2057566|
++--------------+----------+
+|SRSF1-GFP-R4  |SRR2057567|
++--------------+----------+
+|SRSF2-GFP-R1  |SRR2057568|
++--------------+----------+
+|SRSF2-GFP-R2  |SRR2057569|
++--------------+----------+
+|SRSF2-GFP-R3  |SRR2057570|
++--------------+----------+
+|SRSF2-GFP-R4  |SRR2057571|
++--------------+----------+
+|SRSF2-GFP-R5  |SRR2057572|
++--------------+----------+
+|SRSF3-GFP-R1  |SRR2057573|
++--------------+----------+
+|SRSF3-GFP-R2  |SRR2057574|
++--------------+----------+
+|SRSF3-GFP-R3  |SRR2057575|
++--------------+----------+
+|SRSF4-GFP-R1  |SRR2057576|
++--------------+----------+
+|SRSF4-GFP-R2  |SRR2057577|
++--------------+----------+
+|SRSF4-GFP-R3  |SRR2057578|
++--------------+----------+
+|SRSF5-GFP-R1  |SRR2057579|
++--------------+----------+
+|SRSF5-GFP-R2  |SRR2057580|
++--------------+----------+
+|SRSF5-GFP-R3  |SRR2057581|
++--------------+----------+
+|SRSF5-GFP-R4  |SRR2057582|
++--------------+----------+
+|SRSF6-GFP-R1  |SRR2057583|
++--------------+----------+
+|SRSF6-GFP-R2  |SRR2057584|
++--------------+----------+
+|SRSF6-GFP-R3  |SRR2057585|
++--------------+----------+
+|SRSF7-GFP-R1  |SRR2057586|
++--------------+----------+
+|SRSF7-GFP-R2  |SRR2057587|
++--------------+----------+
+|SRSF7-GFP-R3  |SRR2057588|
++--------------+----------+
+|SRSF7-GFP-R4  |SRR2057589|
++--------------+----------+
+|SRSF7-GFP-R5  |SRR2057590|
++--------------+----------+
+|SRSF7-GFP-R6  |SRR2057591|
++--------------+----------+
+|Nxf1-GFP-R1   |SRR2057592|
++--------------+----------+
+|Nxf1-GFP-R2   |SRR2057593|
++--------------+----------+
+|Nxf1-GFP-R3   |SRR2057594|
++--------------+----------+
+|Control-GFP-R1|SRR2057595|
++--------------+----------+
+|Control-GFP-R2|SRR2057596|
++--------------+----------+
+|Control-GFP-R3|SRR2057597|
++--------------+----------+
+|Control-GFP-R4|SRR2057598|
++--------------+----------+
+
+These should be placed in the directory in which the pipeline is to be run. 
+The pipeline expects these to be raw fastq files. That is that they contain the 
+UMIs and the barcodes still on the 5' end  of the reads. This lite version of
+iCLIP pipeline is expecting that all reads
 associated with a sample are in the same fastq file.
 
 In addition to the fastq files, a table of barcodes and samples is required as
-sample_table.tsv.
+sample_table.tsv. The data directory of the repository contains these for
+the SRSF and TDP data. 
 
 It has four columns:
 
@@ -87,58 +193,52 @@ Means that the sample FlipIn-FLAG-R1 should have reads in the fastq file
 SRR12345678 is marked by the barcode GGTT and is embeded in the
 UMI as NNNGGTTNN.
 
+The file used to run the SRSF analysis is included in the data directory of the
+repository and can be copied to the run directory.
+
 Requirements
 ------------
 
-The pipeline requires the results from
-:doc:`pipeline_annotations`. Set the configuration variable
-:py:data:`annotations_database` and :py:data:`annotations_dir`.
-
-On top of the default CGAT setup, the pipeline requires the following
-software to be in the path:
+The pipeline has been built to run in a linux environment. It may be possible to
+run in OSX, but this is untested. The pipeline requires the following software 
+to be installed (listed the versions used in this analysis):
 
 +--------------------+-------------------+------------------------------------------------+
 |*Program*           |*Version*          |*Purpose*                                       |
 +--------------------+-------------------+------------------------------------------------+
-|CGAPipelines        |                   |Pipelining infrastructure, mapping pipeline     |
+|CGAPipelines        | e6bb3be           |Pipelining infrastructure, mapping pipeline     |
+|                    |                   |(http:/github.com/CGATOxford/CGATPipelines)     | 
 +--------------------+-------------------+------------------------------------------------+
-|CGAT                | >=0.2.4           |Various                                         |
+|CGAT                | 0.2.4             |Various                                         |
+|                    |                   |(http:/github.com/CGATOxford/cgat)              |
 +--------------------+-------------------+------------------------------------------------+
-|Bowtie              | >=1.1.2           |Mapping reads                                   |
+|Bowtie              | 1.1.2             |Mapping reads                                   |
 +--------------------+-------------------+------------------------------------------------+
-|FastQC              | >=0.11.2          |Quality Control of demuxed reads                |
+|FastQC              | 0.11.2            |Quality Control of demuxed reads                |
 +--------------------+-------------------+------------------------------------------------+
-|STAR                |                   |Spliced mapping of reads                        |
+|bedtools            | 2.22.0            |Interval manipulation                           |
 +--------------------+-------------------+------------------------------------------------+
-|bedtools            |                   |Interval manipulation                           |
+|samtools            | 1.3.1             |Read manipulation                               |
 +--------------------+-------------------+------------------------------------------------+
-|samtools            |                   |Read manipulation                               |
-+--------------------+-------------------+------------------------------------------------+
-|iCLIPlib            |                   |API and scripts for manipulateion of iCLIP data |
-+--------------------+-------------------+------------------------------------------------+
-|UMI-tools           |>=0.0.2            |UMI manipulation                                |
+|UMI-tools           | 0.0.2             |UMI manipulation                                |
 +--------------------+-------------------+------------------------------------------------+
 |reaper              | 13-100            |Used for demuxing and clipping reads            |
 +--------------------+-------------------+------------------------------------------------+
-
+|jupyter             | 4.1               |Running the statistical analysis and generating |
+|                    |                   |figures                                         |
++--------------------+-------------------+------------------------------------------------+
 
 Pipeline output
 ===============
 
-As well as the report, clusters, as BED files are in the clusters.dir directory,
-and traces as bigWig files are in the bigwig directory. Both of these are exported
-as a UCSU genome browser track hub in the export directory. 
+The for each deduping method there is a directory containing the deduped
+BAM files, signifcant cluster calls  and statistics for each sample. e.g.
+<adjacency.dir> contains the results for deduping using the adjacency method. 
 
-Example
-=======
+The <plots> directory contains the image files for the figures used in the publication.
 
-Example data and configuration is avaiable in example_data.tar.gz
-
-
-Glossary
-========
-
-.. glossary::
+The <notebooks> directory contains html builds of the analysis notebooks exectuted
+on the results of the analysis.
 
 
 Code
@@ -149,7 +249,6 @@ from ruffus import *
 from ruffus.combinatorics import *
 
 import sys
-import glob
 import os
 import re
 
@@ -167,14 +266,19 @@ import PipelineUMI
 
 # load options from the config file
 import CGATPipelines.Pipeline as P
+P.PARAMS["pipeline_src"] = os.path.dirname(__file__)
 P.getParameters(
     ["%s/pipeline.ini" % __file__[:-len(".py")],
      "../pipeline.ini",
      "pipeline.ini"])
 
 PARAMS = P.PARAMS
-
-PARAMS["pipeline_src"] = os.path.dirname(__file__)
+if '%' in PARAMS["sample_table"]:
+    PARAMS["sample_table"] = PARAMS["sample_table"] % PARAMS["pipeline_src"]
+if '%' in PARAMS["annotations_gtf"]:
+    PARAMS["annotations_gtf"] = PARAMS["annotations_gtf"] % PARAMS["pipeline_src"]
+if '%' in PARAMS["annotations_contigs"]:
+    PARAMS["annotations_contigs"] = PARAMS["annotations_contigs"] % PARAMS["pipeline_src"]
 
 ###################################################################
 ###################################################################
@@ -184,7 +288,7 @@ PARAMS["pipeline_src"] = os.path.dirname(__file__)
 # Read preparation
 ###################################################################
 @jobs_limit(1, "db")
-@transform("sample_table.tsv", suffix(".tsv"), ".load")
+@transform(PARAMS["sample_table"], suffix(".tsv"), ".load")
 def loadSampleInfo(infile, outfile):
 
     P.load(infile, outfile,
@@ -201,7 +305,7 @@ def extractUMI(infile, outfile):
 
     statement=''' zcat %(infile)s
                 | umi_tools extract
-                        --bc-pattern=%(reads_bc_pattern)s
+                        --bc-pattern=NNNXXXXNN
                         -L %(outfile)s.log
                 | gzip > %(outfile)s '''
 
@@ -223,14 +327,14 @@ def loadUMIStats(infile, outfile):
 ###################################################################
 @transform("*.fastq.gz",
            regex("(.+).fastq.gz"),
-           add_inputs("sample_table.tsv"),
+           add_inputs(PARAMS["sample_table"]),
            r"\1_reaper_metadata.tsv")
 def generateReaperMetaData(infile, outfile):
     '''Take the sample_table and use it to generate a metadata table
     for reaper in the correct format '''
 
-    adaptor_5prime = PARAMS["reads_5prime_adapt"]
-    adaptor_3prime = PARAMS["reads_3prime_adapt"]
+    adaptor_5prime = "AGATCGGAAGAGCGACGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT"
+    adaptor_3prime = "AGATCGGAAGAGCGGTTCAGCAGGAATGCCGAGACCGATCTCGTATGCCGTCTTCTGCTTG"
 
     outlines = []
     lane = P.snip(infile[0], ".fastq.gz")
@@ -248,7 +352,7 @@ def generateReaperMetaData(infile, outfile):
 ###################################################################
 @follows(loadUMIStats, generateReaperMetaData)
 @subdivide(extractUMI, regex(".+/(.+).fastq.umi_trimmed.gz"),
-           add_inputs(r"\1_reaper_metadata.tsv", "sample_table.tsv"),
+           add_inputs(r"\1_reaper_metadata.tsv", PARAMS["sample_table"]),
            r"demux_fq/*_\1.fastq.gz")
 def demux_fastq(infiles, outfiles):
     '''Demultiplex each fastq file into a seperate file for each
@@ -261,9 +365,10 @@ def demux_fastq(infiles, outfiles):
                           -meta %(meta)s
                           -i <( zcat %(infile)s | sed 's/ /_/g')
                           --noqc
-                          %(reads_reaper_options)s
+                          -3p-head-to-tail 2 
+                          -3p-prefix 6/2/1
                           -basename demux_fq/%(track)s_
-                          -clean-length %(reads_min_length)s > %(track)s_reapear.log;
+                          -clean-length 15 > %(track)s_reapear.log;
                    checkpoint;
                    rename _. _ demux_fq/*clean.gz;
                  '''
@@ -308,34 +413,21 @@ def PrepareReads():
            regex(".+/(.+)_(.+).fastq.gz"),
            r"mapping.dir/\1.bam")
 def run_mapping(infile, outfile):
-    ''' run the mapping target of the mapping pipeline '''
+    ''' Map reads using the selected read mapper '''
 
-    if PARAMS["mapper"] == "bowtie":
-        job_threads = PARAMS["bowtie_threads"]
-        job_memory = PARAMS["bowtie_memory"]
+    job_threads = PARAMS["bowtie_threads"]
+    job_memory = PARAMS["bowtie_memory"]
 
-        m = PipelineMapping.Bowtie(
-            executable=PARAMS["bowtie_executable"],
-            tool_options=PARAMS["bowtie_options"],
-            strip_sequence=PARAMS["strip_sequence"])
-        
-        reffile = os.path.join(PARAMS["bowtie_index_dir"],
-                               PARAMS["genome"] + ".fa")
-        statement = m.build((infile,), outfile)
+    m = PipelineMapping.Bowtie(
+           executable="bowtie",
+           tool_options=PARAMS["bowtie_options"],
+           strip_sequence=0)
 
-    elif["mapper"] == "star":
-        job_threads = PARAMS["star_threads"]
-        job_memory = PARAMS["star_memory"]
+    genome = PARAMS["bowtie_genome"]
+    reffile = os.path.join(PARAMS["bowtie_index_dir"],
+                           PARAMS["bowtie_genome"] + ".fa")
 
-        star_mapping_genome = PARAMS["star_genome"] or PARAMS["genome"]
-
-        m = PipelineMapping.STAR(
-            executable=P.substituteParameters(**locals())["star_executable"],
-            strip_sequence=PARAMS["strip_sequence"])
-
-        statement = m.build((infile,), outfile)
-    else:
-        raise ValueError("Mapper '%s' not implemented" % PARAMS["mapper"])
+    statement = m.build((infile,), outfile)
 
     P.run()
 
@@ -445,7 +537,7 @@ def load_node_counts(infiles, outfile):
                          header="track,category,count")
 
 
-###################################################################
+##################################################################
 @collate(dedup_bams,
          regex("(.+/.+-.+)-(R[0-9]+)(.*).bam"),
          r"\1-agg\3.bam")
@@ -544,9 +636,6 @@ def call_clusters_by_rand(infiles, outfile):
 
     bamfile, annotation = infiles
 
-    genome = os.path.join(PARAMS["genome_dir"],
-                          PARAMS["genome"] + ".fa")
-
     job_threads = 6
     job_memory = "0.5G"
     statement = '''python %(pipeline_src)s/iCLIPlib/scripts/significant_bases_by_randomisation.py
@@ -604,9 +693,7 @@ def get_sig_bases(infiles, outfile):
 def merge_adjacent_clusters(infile, outfile):
     '''Merge bases called as significant if their territories overlap'''
 
-    genome = os.path.join(PARAMS["annotations_contigs"])
-
-    statement = '''bedtools slop -b 15 -i %(infile)s -g %(genome)s
+    statement = '''bedtools slop -b 15 -i %(infile)s -g %(annotations_contigs)s
                  | sort -k1,1 -k2,2n
                  | bedtools merge -i -
                  | gzip > %(outfile)s'''
@@ -748,7 +835,8 @@ def base_level_reproducibility():
          base_level_reproducibility,
          exon_level_correlation,
          clusters)
-@transform(os.path.join(PARAMS["pipeline_src"], "notebooks/*.ipynb"),
+@transform([os.path.join(PARAMS["pipeline_src"], "notebooks/Fig*.ipynb"),
+            os.path.join(PARAMS["pipeline_src"], "notebooks/Examine*.ipynb")],
            regex(".+/(notebooks/.+).ipynb"),
            r"\1.html")
 def runNotebooks2(infile, outfile):
@@ -759,6 +847,7 @@ def runNotebooks2(infile, outfile):
     statement = '''cp %(infile)s %(ipynb_file)s; checkpoint;
                    ipython nbconvert --to=html
                                      --output=%(outfile)s
+                                     --ExecutePreprocessor.timeout=-1
                                      --execute
                                      %(ipynb_file)s > %(outfile)s.log'''
 
