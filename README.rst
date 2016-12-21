@@ -54,14 +54,28 @@ SRR2057573, SRR20 57574, SRR2057575, SRR2057576, SRR2057577,
 SRR2057578, SRR2057579, SRR2057580, SRR2057581, SRR2057582,
 SRR2057583, SRR2057584, SRR2057 585, SRR2057586, SRR2057587,
 SRR2057588, SRR2057589, SRR2057590, SRR2057591, SRR2057592,
-SRR2057593, SRR2057594, SRR2057595, SRR205759 6, SRR2057597,
+SRR2057593, SRR2057594, SRR2057595, SRR2057596, SRR2057597,
 SRR2057598
 
-Edit `pipeline.ini` so to set the bowtie index setting to
-point to an appropriate index genome sequence (for SRSF this would be
-an mm9 genome).
+The pipeline requires a genome sequence (in fasta format) and a bowtie 
+index, named the same way and in the same directory. The `pipeline.ini`
+file must be edited to point to these files, so for example in the ini file::
 
-Run the pipeline with:
+	[bowtie]
+
+	# The location of the genome and indexes for use with bowtie
+	# The directory should contain a fasta genome with the .fa
+	# extension and a bowtie index with the same prefix.
+	# For the SRSF data set this should be an mm9 genome/index
+	# fo the TDP dataset this should be a hg19 genome/index
+	index_dir=~/genomes/bowtie/
+	genome=mm9
+
+Will make the pipeline look for the genome in the `~/genomes/bowtie` directory.
+It will use the mm9 and expect mm9.fa and mm9.1.ebwt, mm9.2.ebwt, etc to be
+present in that directory.
+
+Now run the pipeline with:
 
 .. code:: bash
 
@@ -73,8 +87,6 @@ To run the TDP analysis, copy `TDP_pipeline.ini` rather than
 .. code:: bash
 
 	   python [UMI-Tool_pipelines git directory]/pipeline_iCLIP.py make runNotebooks1
-
-For more detailed documentaiton see
 
 Running locally or running on a cluster
 ----------------------------------------
