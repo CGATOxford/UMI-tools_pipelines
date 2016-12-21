@@ -175,7 +175,7 @@ iCLIP pipeline is expecting that all reads
 associated with a sample are in the same fastq file.
 
 In addition to the fastq files, a table of barcodes and samples is required as
-sample_table.tsv. The data directory of the reposiotry contains these for
+sample_table.tsv. The data directory of the repository contains these for
 the SRSF and TDP data. 
 
 It has four columns:
