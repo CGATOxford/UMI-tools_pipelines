@@ -199,7 +199,8 @@ def mapBWAAgainstGenesetGSE53638(infiles, outfile):
     job_threads = 2
     job_options = "-l mem_free=1.9G"
     bwa_aln_options = "-l 24 -k 2 -n 0.04"
-    bwa_index_dir = os.path.dirname(reference)
+    bwa_index_dir = os.path.abspath(
+        os.path.dirname(reference))
     genome = P.snip(os.path.basename(reference), ".sa")
     bwa_threads = job_threads
     bwa_samse_options = ""
@@ -491,7 +492,8 @@ def mapBowtieAgainstTranscriptomeGSE65525(infiles, outfile):
     job_threads = 2
     job_options = "-l mem_free=1.9G"
     bowtie_options = "-n1 -l 15 -e 300 -M 1 --best --strata"
-    bowtie_index_dir = os.path.dirname(reference)
+    bowtie_index_dir = os.path.abspath(
+        os.path.dirname(reference))
     genome = P.snip(os.path.basename(reference), ".1.ebwt")
     reffile = reference
     bowtie_threads = job_threads
