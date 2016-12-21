@@ -94,9 +94,22 @@ Running locally or running on a cluster
 Pipelines will run either locally or on a cluster. The default cluster
 configuration is to use an SGE cluster manager with the `all.q` queue,
 the `dedicated` pe environment and `mem_free`.  These defaults can be
-altered by changing the `[cluster]` section of the pipeline.ini files.
+altered by changing the following settings in the `[cluster]` section
+of the pipeline.ini files:
+
+* `queue`: The default queue to submit jobs to. Leave as NONE to have your
+  cluster manager decide. (default: all.q)
+* `parallel_environment`: The SGE parallel environment to request when
+  submitting multi-process jobs (default: dedicated)
+* `memory_resource`: The resource name to use when requesting a certian
+  amount of memory for a job.  (default: mem_free)
+* `pe_queue`: If this variable is set then a different queue is used
+  when submitting parallel jobs. (no default)
+* `options`: any other options to pass to the queue manager.
+
 The pipelines are also compatible with the `SLURM` and `torque`
-cluster managers.
+cluster managers. Set the `manager` parameter in the `[cluster]`
+section of the ini. 
 
 It is also possible to run the pipelines locally by adding
 `--no-cluster` to the command.  However this will take a very long
