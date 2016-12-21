@@ -230,7 +230,6 @@ def dedupGSE53638(infile, outfiles):
 
     for outfile in outfiles:
         outfile_tmp = outfile.replace("_deduped.trans.bam", "_temp.trans.bam")
-        outfile_snip = P.snip(outfile, ".bam")
 
         method = P.snip(os.path.basename(
             os.path.dirname(outfile).replace("dedup_", "")), ".dir")
@@ -246,7 +245,7 @@ def dedupGSE53638(infile, outfiles):
         -I %(infile)s -S %(outfile_tmp)s -L %(outfile)s.log
         --output-stats=%(outfile)s.stats %(options)s;
         checkpoint;
-        samtools sort %(outfile_tmp)s %(outfile_snip)s;
+        samtools sort %(outfile_tmp)s > %(outfile)s;
         checkpoint;
         samtools index %(outfile)s;
         checkpoint;
@@ -524,7 +523,6 @@ def dedupGSE65525(infile, outfiles):
 
     for outfile in outfiles:
         outfile_tmp = outfile.replace("_deduped.trans.bam", "_temp.trans.bam")
-        outfile_snip = P.snip(outfile, ".bam")
 
         method = P.snip(os.path.basename(
             os.path.dirname(outfile).replace("dedup_", "")), ".dir")
@@ -542,7 +540,7 @@ def dedupGSE65525(infile, outfiles):
                    --per-contig --method=%(method)s %(stats_cmd)s
                    -I %(infile)s -S %(outfile_tmp)s -L %(outfile)s.log;
                    checkpoint;
-                   samtools sort %(outfile_tmp)s %(outfile_snip)s;
+                   samtools sort %(outfile_tmp)s > %(outfile)s;
                    checkpoint;
                    samtools index %(outfile)s;
                    rm -rf %(outfile_tmp)s'''
