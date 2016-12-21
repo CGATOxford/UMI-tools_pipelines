@@ -288,7 +288,7 @@ if '%' in PARAMS["annotations_contigs"]:
 # Read preparation
 ###################################################################
 @jobs_limit(1, "db")
-@transform(PARAMS["sample_table.tsv"], suffix(".tsv"), ".load")
+@transform(PARAMS["sample_table"], suffix(".tsv"), ".load")
 def loadSampleInfo(infile, outfile):
 
     P.load(infile, outfile,
@@ -305,7 +305,7 @@ def extractUMI(infile, outfile):
 
     statement=''' zcat %(infile)s
                 | umi_tools extract
-                        --bc-pattern==NNNXXXXNN
+                        --bc-pattern=NNNXXXXNN
                         -L %(outfile)s.log
                 | gzip > %(outfile)s '''
 
@@ -419,11 +419,14 @@ def run_mapping(infile, outfile):
     job_memory = PARAMS["bowtie_memory"]
 
     m = PipelineMapping.Bowtie(
-           executable=PARAMS["bowtie_executable"],
+           executable="bowtie",
            tool_options=PARAMS["bowtie_options"],
            strip_sequence=0)
-        
-    reffile = PARAMS["bowtie_index"]
+
+    genome = PARAMS["bowtie_genome"]
+    reffile = os.path.join(PARAMS["bowtie_index_dir"],
+                           PARAMS["bowtie_genome"] + ".fa")
+
     statement = m.build((infile,), outfile)
 
     P.run()
@@ -844,6 +847,7 @@ def runNotebooks2(infile, outfile):
     statement = '''cp %(infile)s %(ipynb_file)s; checkpoint;
                    ipython nbconvert --to=html
                                      --output=%(outfile)s
+                                     --ExecutePreprocessor.timeout=-1
                                      --execute
                                      %(ipynb_file)s > %(outfile)s.log'''
 
