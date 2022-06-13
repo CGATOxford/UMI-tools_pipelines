@@ -143,7 +143,8 @@ These pipelines require the following dependencies:
 +--------------------+-------------------+------------------------------------------------+
 |UMI-tools           | 0.0.2             |UMI manipulation                                |
 +--------------------+-------------------+------------------------------------------------+
-|reaper              | 13-100            |Used for demuxing and clipping reads            |
+|reaper              | 13-100            |Used for demuxing and clipping reads 
+|                    |                   |(https://www.ebi.ac.uk/research/enright/software/kraken)           |
 +--------------------+-------------------+------------------------------------------------+
 |trimmomatic         | 0.32              |Trimming reads for scRNA-seq                    |
 |                    |                   |                                                |
